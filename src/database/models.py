@@ -1,6 +1,7 @@
-from sqlalchemy import Column, Integer, String, Text
+from sqlalchemy import Column, Integer, String, Text, DateTime
 from sqlalchemy.orm import declarative_base
 from pgvector.sqlalchemy import Vector
+import datetime
 
 Base = declarative_base()
 
@@ -17,3 +18,11 @@ class KnowledgeDocument(Base):
     id = Column(Integer, primary_key=True)
     content = Column(Text, nullable=False)
     embedding = Column(Vector(1536)) # OpenAI embedding size
+
+class ChatMessage(Base):
+    __tablename__ = 'chat_messages'
+    id = Column(Integer, primary_key=True)
+    phone_number = Column(String, index=True)
+    role = Column(String) # 'user' or 'agent'
+    content = Column(Text)
+    created_at = Column(DateTime, default=datetime.datetime.utcnow)

@@ -3,6 +3,9 @@ from src.config.settings import get_settings
 from src.agent.graph import build_graph
 from langchain_core.messages import HumanMessage
 from src.api.outbound import send_whatsapp_message
+from src.database.session import SessionLocal
+from src.database.models import ChatMessage
+from loguru import logger
 
 router = APIRouter()
 settings = get_settings()
@@ -39,16 +42,41 @@ async def handle_incoming_message(request: Request):
                         text = msg.get("text", {}).get("body", "")
                         
                         if text:
-                            # Process via LangGraph
-                            state = {"messages": [HumanMessage(content=text)], "config_updates": {}}
+                            # 1. Save user message
+                            db = SessionLocal()
+                            try:
+                                user_msg = ChatMessage(phone_number=phone_number, role="user", content=text)
+                                db.add(user_msg)
+                                db.commit()
+                            except Exception as e:
+                                logger.error(f"Error saving user chat: {e}")
+                            finally:
+                                db.close()
+
+                            # 2. Process via LangGraph
+                            state = {
+                                "messages": [HumanMessage(content=text)], 
+                                "config_updates": {},
+                                "sender_number": phone_number
+                            }
                             result = agent_app.invoke(state)
                             ai_response = result["messages"][-1].content
                             
-                            # Send reply
+                            # 3. Save AI message
+                            db = SessionLocal()
+                            try:
+                                agent_msg = ChatMessage(phone_number=phone_number, role="agent", content=ai_response)
+                                db.add(agent_msg)
+                                db.commit()
+                            except Exception as e:
+                                logger.error(f"Error saving agent chat: {e}")
+                            finally:
+                                db.close()
+                            
+                            # 4. Send reply
                             await send_whatsapp_message(phone_number, ai_response)
             
     except Exception as e:
-        # Log error in production
-        print(f"Error processing webhook: {e}")
+        logger.error(f"Error processing webhook: {e}")
         
     return {"status": "ok"}
