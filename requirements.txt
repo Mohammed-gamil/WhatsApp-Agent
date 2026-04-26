@@ -5,4 +5,6 @@ litellm>=1.63.0
 pytest-mock==3.14.0
 sqlalchemy==2.0.29
 pgvector==0.2.5
-psycopg2-binary==2.9.9
+psycopg[binary]
+langgraph==0.0.35
+langchain-core==0.1.42
