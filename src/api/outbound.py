@@ -1,5 +1,28 @@
-import httpx
+import requests
 from src.config.settings import get_settings
+from loguru import logger
+import httpx
+
+def send_whats360_message(to_number: str, message_text: str):
+    settings = get_settings()
+    url = f"{settings.whats360_api_url}/messages/send"
+    headers = {
+        "Authorization": f"Bearer {settings.whats360_token}",
+        "Content-Type": "application/json"
+    }
+    payload = {
+        "to": to_number,
+        "text": message_text
+    }
+    
+    try:
+        response = requests.post(url, json=payload, headers=headers, timeout=10)
+        response.raise_for_status()
+        logger.info(f"Message sent to {to_number}: {message_text}")
+        return response.json()
+    except Exception as e:
+        logger.error(f"Failed to send message to {to_number}: {e}")
+        return {"success": False, "error": str(e)}
 
 async def send_whatsapp_message(to_number: str, message_text: str):
     settings = get_settings()
