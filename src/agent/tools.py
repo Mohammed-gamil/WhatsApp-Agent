@@ -2,6 +2,20 @@ from src.database.session import SessionLocal
 from src.database.models import SalesLead, KnowledgeDocument
 from litellm import embedding
 from loguru import logger
+from langchain_core.tools import tool
+from src.api.outbound import send_whats360_message
+
+@tool
+def whatsapp_sender(to_number: str, text: str) -> str:
+    """
+    Use this tool to send a WhatsApp message to a user.
+    'to_number' should be the recipient's phone number in international format.
+    'text' is the message body.
+    """
+    result = send_whats360_message(to_number, text)
+    if result.get("success") or "id" in result:
+        return "Message sent successfully."
+    return f"Failed to send message: {result.get('error', 'Unknown error')}"
 
 def query_sales_leads(company_name: str) -> str:
     """Useful for finding lead information in the SQL database."""
