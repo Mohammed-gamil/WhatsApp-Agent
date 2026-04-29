@@ -1,15 +1,37 @@
-from fastapi import APIRouter, Query, Request, HTTPException
+from fastapi import APIRouter, Query, Request, HTTPException, BackgroundTasks
 from src.config.settings import get_settings
 from src.agent.graph import build_graph
 from langchain_core.messages import HumanMessage
 from src.api.outbound import send_whatsapp_message
 from src.database.session import SessionLocal
 from src.database.models import ChatMessage
+from src.agent.service import run_whatsapp_agent
 from loguru import logger
 
 router = APIRouter()
 settings = get_settings()
 agent_app = build_graph()
+
+@router.post("/webhook/whats360")
+async def handle_whats360_webhook(request: Request, background_tasks: BackgroundTasks):
+    try:
+        data = await request.json()
+        logger.info(f"Received webhook: {data}")
+        
+        # Adjust extraction based on actual Whats360 payload
+        # Standard assumption: {"phone": "...", "message": "..."}
+        sender_phone = data.get("phone") or data.get("sender") or data.get("from")
+        text_body = data.get("message") or data.get("text") or data.get("body")
+        
+        if sender_phone and text_body:
+            background_tasks.add_task(run_whatsapp_agent, sender_phone, text_body)
+            return {"status": "success", "message": "Agent triggered in background"}
+        
+        return {"status": "ignored", "reason": "Missing phone or message"}
+        
+    except Exception as e:
+        logger.error(f"Webhook processing error: {e}")
+        return {"status": "error", "message": str(e)}
 
 @router.get("/webhook")
 async def verify_webhook(
