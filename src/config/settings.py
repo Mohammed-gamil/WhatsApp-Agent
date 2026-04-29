@@ -2,7 +2,11 @@ from typing import List
 from pydantic_settings import BaseSettings
 
 class Settings(BaseSettings):
-    app_name: str = "WhatsApp Sales Agent"
+    app_name: str = "WhatsApp AI Agent"
+    whats360_api_url: str = "https://api.whats360.com"
+    whats360_token: str = ""
+    openai_api_key: str = ""
+    
     active_llm_provider: str = "openai"
     meta_verify_token: str = "test_token"
     meta_access_token: str = "test_access"
