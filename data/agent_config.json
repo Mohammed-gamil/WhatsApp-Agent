@@ -3,7 +3,7 @@
   "llm": {
     "provider": "openrouter",
     "model": "nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free",
-    "temperature": 0.0
+    "temperature": 0.7
   },
   "tools_enabled": {
     "send_whatsapp_text": true,
