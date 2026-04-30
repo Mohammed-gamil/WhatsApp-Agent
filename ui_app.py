@@ -170,7 +170,7 @@ with tab4:
             t_doc = st.checkbox("Document Support", value=tools.get("send_whatsapp_document", True))
             t_camp = st.checkbox("Campaign Management", value=tools.get("launch_whatsapp_campaign", True))
             
-            if st.button("Save General Settings"):
+            if st.button("Save Settings"):
                 updated_config = config.copy()
                 updated_config["system_prompt"] = prompt
                 updated_config["tools_enabled"] = {
