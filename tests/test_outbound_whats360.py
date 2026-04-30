@@ -7,8 +7,9 @@ from src.api.outbound import send_whats360_message
 def test_send_whats360_message_success(mock_get_settings, mock_post):
     # Mock settings
     mock_settings = MagicMock()
-    mock_settings.whats360_api_url = "https://api.whats360.test"
+    mock_settings.whats360_api_url = "https://apis.whats360.live"
     mock_settings.whats360_token = "test_token"
+    mock_settings.whats360_instance_id = "test_instance"
     mock_get_settings.return_value = mock_settings
     
     # Mock response
@@ -21,13 +22,17 @@ def test_send_whats360_message_success(mock_get_settings, mock_post):
     
     assert result == {"success": True, "id": "msg_123"}
     mock_post.assert_called_once_with(
-        "https://api.whats360.test/messages/send",
-        json={"to": "123456789", "text": "Hello!"},
+        "https://apis.whats360.live/api/user/v2/send_message",
+        json={
+            "client_id": "test_instance",
+            "mobile": "123456789",
+            "text": "Hello!"
+        },
         headers={
             "Authorization": "Bearer test_token",
             "Content-Type": "application/json"
         },
-        timeout=10
+        timeout=15
     )
 
 @patch("src.api.outbound.requests.post")

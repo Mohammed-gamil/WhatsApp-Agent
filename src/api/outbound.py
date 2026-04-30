@@ -5,23 +5,28 @@ import httpx
 
 def send_whats360_message(to_number: str, message_text: str):
     settings = get_settings()
-    url = f"{settings.whats360_api_url}/messages/send"
+    url = f"{settings.whats360_api_url}/api/user/v2/send_message"
     headers = {
         "Authorization": f"Bearer {settings.whats360_token}",
         "Content-Type": "application/json"
     }
     payload = {
-        "to": to_number,
+        "client_id": settings.whats360_instance_id,
+        "mobile": to_number,
         "text": message_text
     }
     
     try:
-        response = requests.post(url, json=payload, headers=headers, timeout=10)
+        logger.info(f"Sending message to {to_number} via Whats360 v2")
+        response = requests.post(url, json=payload, headers=headers, timeout=15)
         response.raise_for_status()
-        logger.info(f"Message sent to {to_number}: {message_text}")
-        return response.json()
+        data = response.json()
+        logger.info(f"Message sent successfully to {to_number}")
+        return data
     except Exception as e:
         logger.error(f"Failed to send message to {to_number}: {e}")
+        if hasattr(e, 'response') and e.response is not None:
+            logger.error(f"Response: {e.response.text}")
         return {"success": False, "error": str(e)}
 
 async def send_whatsapp_message(to_number: str, message_text: str):

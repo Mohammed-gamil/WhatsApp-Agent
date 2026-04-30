@@ -1,8 +1,8 @@
 from litellm import completion
 
-def generate_response(prompt: str, provider: str = "openai") -> str:
+def generate_response(prompt: str, provider: str = "openai", model: str = None) -> str:
     # provider format expected by litellm: "openai/gpt-4", "groq/llama3-8b-8192", "openrouter/anthropic/claude-3-opus"
-    model_name = f"{provider}/default-model" if "/" not in provider else provider
+    model_name = model if model else (f"{provider}/default-model" if "/" not in provider else provider)
     
     response = completion(
         model=model_name,

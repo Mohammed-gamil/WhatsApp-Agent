@@ -16,18 +16,25 @@ agent_app = build_graph()
 async def handle_whats360_webhook(request: Request, background_tasks: BackgroundTasks):
     try:
         data = await request.json()
-        logger.info(f"Received webhook: {data}")
+        logger.info(f"Received Whats360 webhook: {data}")
         
-        # Adjust extraction based on actual Whats360 payload
-        # Standard assumption: {"phone": "...", "message": "..."}
-        sender_phone = data.get("phone") or data.get("sender") or data.get("from")
-        text_body = data.get("message") or data.get("text") or data.get("body")
+        event_type = data.get("event")
+        
+        # We only care about incoming messages
+        if event_type != "message.received":
+            logger.info(f"Ignoring Whats360 event: {event_type}")
+            return {"status": "ignored", "event": event_type}
+            
+        message_data = data.get("data", {})
+        sender_phone = message_data.get("from")
+        text_body = message_data.get("text")
         
         if sender_phone and text_body:
+            logger.info(f"Triggering agent for {sender_phone}: {text_body[:50]}...")
             background_tasks.add_task(run_whatsapp_agent, sender_phone, text_body)
             return {"status": "success", "message": "Agent triggered in background"}
         
-        return {"status": "ignored", "reason": "Missing phone or message"}
+        return {"status": "ignored", "reason": "Missing from or text in message data"}
         
     except Exception as e:
         logger.error(f"Webhook processing error: {e}")

@@ -15,11 +15,13 @@ class ConfigService:
         if not self.config_path.exists():
             default_config = {
                 "system_prompt": "You are a professional WhatsApp AI Assistant. You MUST ALWAYS use the 'send_whatsapp_text' tool to send your reply to the user. Never just type a message in plain text; if you do, the user will never see it.",
-                "llm": {
-                    "provider": "openrouter",
-                    "model": "nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free",
-                    "temperature": 0.0
-                },
+                "llm_providers": [
+                    {
+                        "provider": "openrouter",
+                        "model": "nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free",
+                        "temperature": 0.0
+                    }
+                ],
                 "tools_enabled": {
                     "send_whatsapp_text": True,
                     "send_whatsapp_image": True,
@@ -38,7 +40,15 @@ class ConfigService:
     def get_config(self) -> dict:
         try:
             with open(self.config_path, "r") as f:
-                return json.load(f)
+                config = json.load(f)
+            
+            # Migrate old config format if needed
+            if "llm" in config and "llm_providers" not in config:
+                logger.info("Migrating configuration from 'llm' to 'llm_providers'")
+                config["llm_providers"] = [config.pop("llm")]
+                self.update_config(config)
+            
+            return config
         except Exception as e:
             logger.error(f"Error reading config: {e}")
             return {}

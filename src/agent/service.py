@@ -1,3 +1,4 @@
+from langchain_openai import ChatOpenAI
 from langchain.agents import create_agent
 from src.agent.tools import whatsapp_sender
 from src.config.settings import get_settings
@@ -7,9 +8,14 @@ import os
 def run_whatsapp_agent(sender_phone: str, user_message: str):
     settings = get_settings()
     
-    # Ensure API key is in environment for create_agent/init_chat_model
-    if settings.openai_api_key:
-        os.environ["OPENAI_API_KEY"] = settings.openai_api_key
+    # Configure OpenRouter
+    # Base URL for OpenRouter is https://openrouter.ai/api/v1
+    llm = ChatOpenAI(
+        openai_api_base="https://openrouter.ai/api/v1",
+        openai_api_key=settings.openrouter_api_key,
+        model="nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free",
+        temperature=0.1 # Low temperature for reasoning
+    )
 
     system_prompt = (
         f"You are a helpful WhatsApp assistant. The user's phone number is {sender_phone}. "
@@ -20,7 +26,7 @@ def run_whatsapp_agent(sender_phone: str, user_message: str):
     try:
         # create_agent returns a LangGraph CompiledStateGraph
         agent = create_agent(
-            model="gpt-4o",
+            model=llm, # Pass the configured LLM object
             tools=[whatsapp_sender],
             system_prompt=system_prompt
         )
