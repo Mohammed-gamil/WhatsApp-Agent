@@ -116,38 +116,73 @@ with tab4:
         if config_res.status_code == 200:
             config = config_res.json()
             
-            # 1. LLM Settings
-            st.subheader("LLM Settings")
-            provider = st.selectbox("Provider", ["openrouter", "openai", "groq"], index=0)
-            model_name = st.text_input("Model Name", value=config["llm"]["model"])
-            temp = st.slider("Temperature", 0.0, 1.0, float(config["llm"]["temperature"]), 0.1)
+            # 1. LLM Providers Management
+            st.subheader("LLM Providers (Priority Order)")
+            providers = config.get("llm_providers", [])
+            
+            if not providers:
+                st.warning("No LLM providers configured. The agent will not function.")
+            
+            for i, p in enumerate(providers):
+                col1, col2, col3 = st.columns([4, 1, 1])
+                with col1:
+                    st.write(f"{i+1}. **{p['provider']}**: `{p['model']}` (T: {p['temperature']})")
+                with col3:
+                    if st.button("Remove", key=f"rm_{i}"):
+                        providers.pop(i)
+                        config["llm_providers"] = providers
+                        requests.post("http://localhost:8080/api/v1/config", json=config)
+                        st.rerun()
+
+            # Add new provider form
+            with st.expander("➕ Add Fallback Provider"):
+                new_provider = st.selectbox("Provider", ["openrouter", "openai", "groq"], key="new_prov")
+                new_model = st.text_input("Model Name", placeholder="e.g., openai/gpt-4o", key="new_model")
+                new_temp = st.slider("Temperature", 0.0, 1.0, 0.0, 0.1, key="new_temp")
+                if st.button("Add to List"):
+                    if not new_model:
+                        st.error("Please enter a model name.")
+                    else:
+                        new_p = {
+                            "provider": new_provider,
+                            "model": new_model,
+                            "temperature": new_temp
+                        }
+                        config.setdefault("llm_providers", []).append(new_p)
+                        save_res = requests.post("http://localhost:8080/api/v1/config", json=config)
+                        if save_res.status_code == 200:
+                            st.success(f"Added {new_model}")
+                            st.rerun()
+                        else:
+                            st.error("Failed to save provider.")
+            
+            st.markdown("---")
             
             # 2. System Prompt
             st.subheader("System Prompt")
-            prompt = st.text_area("Base Instructions", value=config["system_prompt"], height=200)
+            prompt = st.text_area("Base Instructions", value=config.get("system_prompt", ""), height=200)
             
             # 3. Tools Toggles
             st.subheader("Enabled Tools")
-            t_text = st.checkbox("Text Messaging", value=config["tools_enabled"]["send_whatsapp_text"])
-            t_image = st.checkbox("Image Support", value=config["tools_enabled"]["send_whatsapp_image"])
-            t_doc = st.checkbox("Document Support", value=config["tools_enabled"]["send_whatsapp_document"])
-            t_camp = st.checkbox("Campaign Management", value=config["tools_enabled"]["launch_whatsapp_campaign"])
+            tools = config.get("tools_enabled", {})
+            t_text = st.checkbox("Text Messaging", value=tools.get("send_whatsapp_text", True))
+            t_image = st.checkbox("Image Support", value=tools.get("send_whatsapp_image", True))
+            t_doc = st.checkbox("Document Support", value=tools.get("send_whatsapp_document", True))
+            t_camp = st.checkbox("Campaign Management", value=tools.get("launch_whatsapp_campaign", True))
             
-            if st.button("Save Settings"):
-                updated_config = {
-                    "system_prompt": prompt,
-                    "llm": {"provider": provider, "model": model_name, "temperature": temp},
-                    "tools_enabled": {
-                        "send_whatsapp_text": t_text,
-                        "send_whatsapp_image": t_image,
-                        "send_whatsapp_document": t_doc,
-                        "launch_whatsapp_campaign": t_camp
-                    },
-                    "rag": config.get("rag", {"enabled": False, "backend_url": ""})
+            if st.button("Save General Settings"):
+                updated_config = config.copy()
+                updated_config["system_prompt"] = prompt
+                updated_config["tools_enabled"] = {
+                    "send_whatsapp_text": t_text,
+                    "send_whatsapp_image": t_image,
+                    "send_whatsapp_document": t_doc,
+                    "launch_whatsapp_campaign": t_camp
                 }
+                
                 save_res = requests.post("http://localhost:8080/api/v1/config", json=updated_config)
                 if save_res.status_code == 200:
-                    st.success("Configuration updated successfully!")
+                    st.success("General settings updated successfully!")
                 else:
                     st.error(f"Failed to update configuration: {save_res.status_code}")
         else:
